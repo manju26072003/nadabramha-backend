@@ -21,31 +21,28 @@ const CALENDAR_ID = "manjugymanja@gmail.com";
 /* ===============================
    GET EVENTS (PUBLIC / USER)
 ================================ */
-app.get("/events", async (req, res) => {
+app.get("/events/date/:date", async (req, res) => {
   try {
-    const { date } = req.query;
+    const date = req.params.date;
 
-    let timeMin, timeMax;
-
-    if (date) {
-      timeMin = new Date(`${date}T00:00:00`).toISOString();
-      timeMax = new Date(`${date}T23:59:59`).toISOString();
-    }
+    const startOfDay = new Date(date + "T00:00:00");
+    const endOfDay = new Date(date + "T23:59:59");
 
     const response = await calendar.events.list({
-      calendarId: CALENDAR_ID,
-      timeMin,
-      timeMax,
+      calendarId: process.env.GOOGLE_CALENDAR_ID,
+      timeMin: startOfDay.toISOString(),
+      timeMax: endOfDay.toISOString(),
       singleEvents: true,
       orderBy: "startTime",
     });
 
     res.json(response.data.items || []);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch events" });
+  } catch (error) {
+    console.error("Date fetch error:", error);
+    res.status(500).json({ error: "Failed to fetch events by date" });
   }
 });
+
 
 /* ===============================
    CREATE EVENT (ADMIN)
