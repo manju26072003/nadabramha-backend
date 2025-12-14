@@ -1,4 +1,4 @@
-require("dotenv/lib/main").config();
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { google } = require("googleapis/build/src");
