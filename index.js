@@ -26,27 +26,36 @@ const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
 // ===============================
 // GET EVENTS BY DATE (PUBLIC)
 // ===============================
-app.get("/events/date/:date", async (req, res) => {
+// ===============================
+// GET EVENTS BY MONTH (FOR DOTS)
+// ===============================
+app.get("/events/month", async (req, res) => {
   try {
-    const date = req.params.date;
+    const { year, month } = req.query;
 
-    const startOfDay = new Date(`${date}T00:00:00`);
-    const endOfDay = new Date(`${date}T23:59:59`);
+    if (!year || !month) {
+      return res.status(400).json({ error: "Year and month required" });
+    }
+
+    const start = new Date(`${year}-${month}-01T00:00:00`);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + 1);
 
     const response = await calendar.events.list({
-      calendarId: CALENDAR_ID,
-      timeMin: startOfDay.toISOString(),
-      timeMax: endOfDay.toISOString(),
+      calendarId: process.env.GOOGLE_CALENDAR_ID,
+      timeMin: start.toISOString(),
+      timeMax: end.toISOString(),
       singleEvents: true,
       orderBy: "startTime",
     });
 
     res.json(response.data.items || []);
-  } catch (error) {
-    console.error("Date fetch error:", error);
-    res.status(500).json({ error: "Failed to fetch events by date" });
+  } catch (err) {
+    console.error("Month fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch month events" });
   }
 });
+
 
 // ===============================
 // CREATE EVENT (ADMIN)
