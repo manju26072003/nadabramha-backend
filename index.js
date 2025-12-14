@@ -1,35 +1,39 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const { google } = require("googleapis/build/src");
+const { google } = require("googleapis");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔐 Load service account
-const auth = new google.auth.GoogleAuth({
-  keyFile: "service-account.json",
-  scopes: ["https://www.googleapis.com/auth/calendar"],
-});
+// ===============================
+// 🔐 Google Auth (ENV VARIABLES)
+// ===============================
+const auth = new google.auth.JWT(
+  process.env.GOOGLE_CLIENT_EMAIL,
+  null,
+  process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+  ["https://www.googleapis.com/auth/calendar"]
+);
 
 const calendar = google.calendar({ version: "v3", auth });
 
-// 🔹 Replace with your calendar ID
-const CALENDAR_ID = "manjugymanja@gmail.com";
+// ✅ USE ONE SOURCE OF TRUTH
+const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
 
-/* ===============================
-   GET EVENTS (PUBLIC / USER)
-================================ */
+// ===============================
+// GET EVENTS BY DATE (PUBLIC)
+// ===============================
 app.get("/events/date/:date", async (req, res) => {
   try {
     const date = req.params.date;
 
-    const startOfDay = new Date(date + "T00:00:00");
-    const endOfDay = new Date(date + "T23:59:59");
+    const startOfDay = new Date(`${date}T00:00:00`);
+    const endOfDay = new Date(`${date}T23:59:59`);
 
     const response = await calendar.events.list({
-      calendarId: process.env.GOOGLE_CALENDAR_ID,
+      calendarId: CALENDAR_ID,
       timeMin: startOfDay.toISOString(),
       timeMax: endOfDay.toISOString(),
       singleEvents: true,
@@ -43,13 +47,12 @@ app.get("/events/date/:date", async (req, res) => {
   }
 });
 
-
-/* ===============================
-   CREATE EVENT (ADMIN)
-================================ */
+// ===============================
+// CREATE EVENT (ADMIN)
+// ===============================
 app.post("/events", async (req, res) => {
   try {
-const { summary, date, time, location, description } = req.body;
+    const { summary, date, time, location, description } = req.body;
 
     const start = new Date(`${date}T${time}:00`).toISOString();
     const end = new Date(new Date(start).getTime() + 60 * 60 * 1000).toISOString();
@@ -57,7 +60,7 @@ const { summary, date, time, location, description } = req.body;
     const event = await calendar.events.insert({
       calendarId: CALENDAR_ID,
       requestBody: {
-summary: summary,
+        summary,
         location,
         description,
         start: { dateTime: start },
@@ -72,12 +75,12 @@ summary: summary,
   }
 });
 
-/* ===============================
-   UPDATE EVENT (ADMIN)
-================================ */
+// ===============================
+// UPDATE EVENT (ADMIN)
+// ===============================
 app.put("/events/:id", async (req, res) => {
   try {
-const { summary, date, time, location, description } = req.body;
+    const { summary, date, time, location, description } = req.body;
 
     const start = new Date(`${date}T${time}:00`).toISOString();
     const end = new Date(new Date(start).getTime() + 60 * 60 * 1000).toISOString();
@@ -86,7 +89,7 @@ const { summary, date, time, location, description } = req.body;
       calendarId: CALENDAR_ID,
       eventId: req.params.id,
       requestBody: {
-summary: summary,
+        summary,
         location,
         description,
         start: { dateTime: start },
@@ -101,9 +104,9 @@ summary: summary,
   }
 });
 
-/* ===============================
-   DELETE EVENT (ADMIN)
-================================ */
+// ===============================
+// DELETE EVENT (ADMIN)
+// ===============================
 app.delete("/events/:id", async (req, res) => {
   try {
     await calendar.events.delete({
@@ -118,9 +121,8 @@ app.delete("/events/:id", async (req, res) => {
   }
 });
 
+// ===============================
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
   console.log("✅ Server running on port", PORT);
 });
-
